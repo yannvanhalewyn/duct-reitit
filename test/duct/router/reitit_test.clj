@@ -16,13 +16,24 @@
        :headers {}
        :body (str (* x y))})))
 
+(defn- wrap-admin [handler]
+  (fn [{:keys [query-params] :as req}]
+    (if (= "admin" (:role query-params))
+      (handler req)
+      {:status 403
+       :headers {}
+       :body "Not admin"})))
+
 (def config
   {::handler.hello {}
    ::handler.math {}
    :duct.router/reitit {:routes ["/"
                                  ["hello/:name" {:handler (ig/ref ::handler.hello)}]
-                                 ["math" {:get {:parameters {:query {:x int? :y int?}}
-                                                :handler (ig/ref ::handler.math)}}]]}})
+                                 ["math" {:parameters {:query {:x int? :y int?}}
+                                          :handler (ig/ref ::handler.math)}]
+                                 ["admin" {:handler (ig/ref ::handler.hello)
+                                           :middleware [::admin]}]]
+                        :middleware {::admin wrap-admin}}})
 
 (deftest router-test
   (let [handler (:duct.router/reitit (ig/init config))]
@@ -35,5 +46,11 @@
       (is (= {:status 200 :headers {} :body "12"}
              (handler {:uri "/math"
                        :request-method :get
-                       :query-params {:x "3" :y "4"}}))))))
+                       :query-params {:x "3" :y "4"}}))))
 
+    (testing "It uses the middleware registry"
+      (let [req #(handler {:uri "/admin"
+                           :request-method :get
+                           :query-params {:role %}})]
+        (is (= 200 (:status (req "admin"))))
+        (is (= 403 (:status (req "user"))))))))
