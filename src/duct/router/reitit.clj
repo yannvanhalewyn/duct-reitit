@@ -11,11 +11,9 @@
                 ring.coercion/coerce-request-middleware
                 ring.coercion/coerce-response-middleware]})
 
-(defmethod ig/prep-key :duct.router/reitit [_ {:keys [routes] :as options}]
+(defmethod ig/prep-key :duct.router/reitit [_ {:keys [routes] ::ring/keys [opts]}]
   {:routes routes
-   :opts (merge
-          {:data default-route-opts}
-          (dissoc options :routes))})
+   ::ring/opts (merge {:data default-route-opts} opts)})
 
-(defmethod ig/init-key :duct.router/reitit [_ {:keys [routes opts]}]
+(defmethod ig/init-key :duct.router/reitit [_ {:keys [routes] ::ring/keys [opts]}]
   (ring/ring-handler (ring/router routes opts)))
