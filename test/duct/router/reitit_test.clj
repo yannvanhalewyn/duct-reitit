@@ -1,5 +1,5 @@
 (ns duct.router.reitit-test
-  (:require [duct.router.reitit]
+  (:require [duct.router.reitit :as duct.reitit]
             [clojure.test :refer [deftest testing is]]
             [integrant.core :as ig]))
 
@@ -33,10 +33,23 @@
                                           :handler (ig/ref ::handler.math)}]
                                  ["admin" {:handler (ig/ref ::handler.hello)
                                            :middleware [::admin]}]]
-                        :middleware {::admin wrap-admin}}})
+                        :reitit.middleware/registry {::admin wrap-admin}}})
+
+(deftest prep-test
+  (let [prep #(:duct.router/reitit (ig/prep {:duct.router/reitit %}))]
+
+    (testing "It uses default coercers and keeps extra opts passed in"
+      (is (= {:routes ["/"]
+              :opts {:data duct.reitit/default-opts
+                     :my-key "my-val"}}
+             (prep {:routes ["/"] :my-key "my-val"}))))
+
+    (testing "It can overwrite default coercers"
+      (is (= {:routes ["/"] :opts {:data {}}}
+             (prep {:routes ["/"] :data {}}))))))
 
 (deftest router-test
-  (let [handler (:duct.router/reitit (ig/init config))]
+  (let [handler (:duct.router/reitit (ig/init (ig/prep config)))]
     (testing "It hooks up the routes and handlers correctly"
       (is (= {:status 200 :headers {} :body "Hello world"}
              (handler {:uri "/hello/world"
