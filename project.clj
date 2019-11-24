@@ -1,4 +1,4 @@
-(defproject duct.router/reitit "0.1.0-SNAPSHOT"
+(defproject duct/module.reitit "0.0.1"
   :description "Duct module and router for the Reitit routing library"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
