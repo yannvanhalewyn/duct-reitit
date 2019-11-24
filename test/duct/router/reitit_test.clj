@@ -17,6 +17,12 @@
        :headers {}
        :body (str (* x y))})))
 
+(defmethod ig/init-key ::handler.not-found [_ _]
+  (fn [_] {:status 404 :headers {} :body "Not found"}))
+
+(defmethod ig/init-key ::handler.bad-request [_ _]
+  (fn [_] {:status 400 :headers {} :body "Bad request"}))
+
 (defn- wrap-admin [handler]
   (fn [{:keys [query-params] :as req}]
     (if (= "admin" (:role query-params))
@@ -28,44 +34,61 @@
 (def config
   {::handler.hello {}
    ::handler.math {}
+   ::handler.bad-request {}
+   ::handler.not-found {}
    :duct.router/reitit {:routes ["/"
                                  ["hello/:name" {:handler (ig/ref ::handler.hello)}]
-                                 ["math" {:parameters {:query {:x int? :y int?}}
-                                          :handler (ig/ref ::handler.math)}]
+                                 ["math" {:get {:parameters {:query {:x int? :y int?}}
+                                                :handler (ig/ref ::handler.math)}}]
                                  ["admin" {:handler (ig/ref ::handler.hello)
                                            :middleware [::admin]}]]
-                        ::ring/opts {:reitit.middleware/registry {::admin wrap-admin}}}})
+                        ::ring/opts {:reitit.middleware/registry {::admin wrap-admin}}
+                        ::ring/default-handlers
+                        {:not-acceptable     (ig/ref ::handler.bad-request)
+                         :not-found          (ig/ref ::handler.not-found)
+                         :method-not-allowed (ig/ref ::handler.not-found)}}})
 
 (deftest prep-test
   (let [prep #(:duct.router/reitit (ig/prep {:duct.router/reitit %}))]
 
-    (testing "It uses default coercers and keeps extra opts passed in"
+    (testing "It uses default coercers, handlers and extra opts"
       (is (= {:routes ["/"]
               ::ring/opts {:data duct.reitit/default-opts
-                           :my-key "my-val"}}
+                           :my-key "my-val"}
+              ::ring/default-handlers duct.reitit/default-handlers}
              (prep {:routes ["/"] ::ring/opts {:my-key "my-val"}}))))
 
-    (testing "It can overwrite default coercers"
+    (testing "It can overwrite default coercers and handlers"
       (is (= {:routes ["/"]
-              ::ring/opts {:data {}}}
-             (prep {:routes ["/"] ::ring/opts {:data {}}}))))))
+              ::ring/opts {:data {}}
+              ::ring/default-handlers
+              {:not-found :some-handler
+               :not-acceptable :other-handler
+               :method-not-allowed (ig/ref :duct.handler.static/method-not-allowed)}}
+             (prep {:routes ["/"]
+                    ::ring/opts {:data {}}
+                    ::ring/default-handlers {:not-found :some-handler
+                                             :not-acceptable :other-handler}}))))))
 
 (deftest router-test
-  (let [handler (:duct.router/reitit (ig/init (ig/prep config)))]
+  (let [handler (:duct.router/reitit (ig/init (ig/prep config)))
+        req (fn [method uri & [params]]
+              (handler {:uri uri
+                        :request-method method
+                        :query-params params}))]
+
     (testing "It hooks up the routes and handlers correctly"
       (is (= {:status 200 :headers {} :body "Hello world"}
-             (handler {:uri "/hello/world"
-                       :request-method :get}))))
+             (req :get "/hello/world"))))
 
     (testing "It can coerce the input params"
       (is (= {:status 200 :headers {} :body "12"}
-             (handler {:uri "/math"
-                       :request-method :get
-                       :query-params {:x "3" :y "4"}}))))
+             (req :get "/math" {:x "3" :y "4"}))))
 
     (testing "It uses the middleware registry"
-      (let [req #(handler {:uri "/admin"
-                           :request-method :get
-                           :query-params {:role %}})]
-        (is (= 200 (:status (req "admin"))))
-        (is (= 403 (:status (req "user"))))))))
+      (is (= 200 (:status (req :get "/admin" {:role "admin"}))))
+      (is (= 403 (:status (req :get "/admin" {:role "user"})))))
+
+    (testing "It uses default handlers"
+      (is (= "Not found" (:body (req :get "/not-found"))))
+      (is (= "Not found" (:body (req :post "/math")))))))
