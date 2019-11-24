@@ -1,0 +1,2 @@
+{:duct.router/reitit [:duct/router]
+ :duct.module/reitit [:duct/module]}
