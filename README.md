@@ -4,7 +4,7 @@ A [Duct][] module that sets [Reitit][] as the router for your
 application.
 
 [duct]: https://github.com/duct-framework/duct
-[ataraxy]: https://github.com/metosin/reitit
+[reitit]: https://github.com/metosin/reitit
 
 ## Installation
 
@@ -13,6 +13,49 @@ To install, add the following to your project `:dependencies`:
     [duct/module.reitit "0.0.1"]
 
 ## Usage
+
+### Basic
+
+To add this module to your configuration, add the
+`:duct.module/reitit` key. For example:
+
+```edn
+{:duct.core/project-ns my-app
+ :duct.module/reitit {"/" :index}
+ :my-app.handler/index {}}
+```
+
+The `:duct.module/reitit` key should contain a map of Reitit
+routes. See the [route syntax][] section of Reitit's documentation for
+more information on the format it expects.
+
+The module uses the `:duct.core/project-ns` key and the result key to
+find an appropriate Integrant key at:
+
+    <project-ns>.handler[.<result key namespace>]/<result key name>
+
+So in the above example, the project namespace is `my-app` and the only
+result key is `:index`, so the module looks for a `:my-app.handler/index`
+Integrant key.
+
+If the result key was `:example/index` instead, then the Integrant key
+would be `:my-app.handler.example/index`.
+
+Similarly, the module looks for middleware at:
+
+    <project-ns>.middleware[.<metadata key namespace>]/<metadata key name>
+
+For example:
+
+```edn
+{:duct.core/project-ns   my-app
+ :duct.module/reitit     {"/" {:name :index
+                               :middleware [:example]}
+ :my-app.handler/index      {}
+ :my-app.middleware/example {}}
+```
+
+[route syntax]: https://metosin.github.io/reitit/basics/route_syntax.html
 
 ### Advanced
 
