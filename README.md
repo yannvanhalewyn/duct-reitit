@@ -50,9 +50,21 @@ For example:
 ```edn
 {:duct.core/project-ns   my-app
  :duct.module/reitit     {"/" {:name :index
-                               :middleware [:example]}
+                               :middleware [:example]}}
  :my-app.handler/index      {}
  :my-app.middleware/example {}}
+```
+
+Reitit will assoc the router in the request by default. This is useful
+for if you need to generate the path for a given route name.
+
+```clojure
+(require '[reitit.core :as reitit])
+
+(defn my-handler [{::reitit/keys [router]}]
+  (:path (reitit/match-by-name router :user/show {:id 1}))
+  ;; => "/users/1"
+  )
 ```
 
 [route syntax]: https://metosin.github.io/reitit/basics/route_syntax.html
