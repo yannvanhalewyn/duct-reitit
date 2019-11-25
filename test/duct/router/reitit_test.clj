@@ -38,7 +38,7 @@
    ::handler.not-found {}
    :duct.router/reitit {:routes ["/"
                                  ["hello/:name" {:handler (ig/ref ::handler.hello)}]
-                                 ["math" {:get {:parameters {:query {:x int? :y int?}}
+                                 ["math" {:get {:parameters {:query {:x 'int? :y 'int?}}
                                                 :handler (ig/ref ::handler.math)}}]
                                  ["admin" {:handler (ig/ref ::handler.hello)
                                            :middleware [::admin]}]]
@@ -53,9 +53,9 @@
 
     (testing "It uses default coercers, handlers and extra opts"
       (is (= {:routes ["/"]
-              ::ring/opts {:data duct.reitit/default-opts
+              ::ring/opts {:data duct.reitit/default-route-opts
                            :my-key "my-val"}
-              ::ring/default-handlers duct.reitit/default-handlers}
+              ::ring/default-handlers duct.reitit/default-default-handlers}
              (prep {:routes ["/"] ::ring/opts {:my-key "my-val"}}))))
 
     (testing "It can overwrite default coercers and handlers"
@@ -68,7 +68,18 @@
              (prep {:routes ["/"]
                     ::ring/opts {:data {}}
                     ::ring/default-handlers {:not-found :some-handler
-                                             :not-acceptable :other-handler}}))))))
+                                             :not-acceptable :other-handler}}))))
+
+    (testing "It resolves any symbols to clojure core"
+      (is (= ["/" {:parameters {:query {:int? int?
+                                        :string? string?
+                                        :blank? clojure.string/blank?
+                                        :other 'other}}}]
+             (:routes
+              (prep {:routes ["/" {:parameters {:query {:int? 'int?
+                                                        :string? 'string?
+                                                        :blank? 'clojure.string/blank?
+                                                        :other 'other}}}]})))))))
 
 (deftest router-test
   (let [handler (:duct.router/reitit (ig/init (ig/prep config)))
