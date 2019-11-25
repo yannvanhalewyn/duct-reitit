@@ -14,8 +14,6 @@ To install, add the following to your project `:dependencies`:
 
 ## Usage
 
-### Basic
-
 To use this router, add the `:duct.router/reitit` key and reference it
 from `:duct.core/handler` to use it.
 
@@ -28,7 +26,9 @@ from `:duct.core/handler` to use it.
   {:routes ["/" {:handler #ig/ref :my-app.handler/index
                  :middleware [#ig/ref :my-app.middleware/example]}]
    :reitit.ring/opts { ;; Add extra opts to be passed in to reitit.ring/router
-                      }}
+                      }
+   :retit.ring/default-handlers { ;; Optionally overwrite the default handlers
+                                 }}
   :my-app.handler/index {}
   :my-app.middleware/example {}}}
 ```
