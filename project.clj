@@ -1,5 +1,5 @@
-(defproject duct/module.reitit "0.0.1"
-  :description "Duct module and router for the Reitit routing library"
+(defproject duct/reitit "0.0.1"
+  :description "A Reitit router for Duct"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
